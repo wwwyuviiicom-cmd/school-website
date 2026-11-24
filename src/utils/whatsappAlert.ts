@@ -309,3 +309,51 @@ export function buildFeeMessage(
   const student = getStudentInfo(className, rollNumber);
   return `गायत्री विद्या मंदिर (GVM) फीस अलर्ट
 नमस्कार सर/मैडम,
+आपके बच्चे ${student.name} (रोल नंबर: ${rollNumber}) की स्कूल फीस ₹${amount} बकाया है। जमा करने की अंतिम तिथि ${formatFeeDate(lastDate)} है। कृपया लेट फीस से बचने के लिए समय पर भुगतान करें।
+धन्यवाद।`;
+}
+
+export function sendFeeRemindersToWhatsApp(
+  className: string,
+  rollNumbers: string[],
+  amount: string,
+  lastDate: string
+): void {
+  openWhatsAppMessages(
+    rollNumbers.map((roll) => ({
+      phone: getStudentInfo(className, roll).phone,
+      text: buildFeeMessage(className, roll, amount, lastDate),
+    }))
+  );
+}
+
+export function buildDiaryMessage(
+  className: string,
+  classwork: string,
+  homework: string,
+  subject?: string
+): string {
+  const subjectLine = subject ? `\n📚 विषय (Subject): ${subject}` : '';
+  return `गायत्री विद्या मंदिर (GVM) दैनिक डायरी
+कक्षा: ${className}${subjectLine}
+नमस्कार सर/मैडम, आज स्कूल में यह कार्य करवाया गया है:
+📘 आज पढ़ाया गया: ${classwork}
+📝 आज का गृहकार्य: ${homework}
+कृपया घर पर बच्चों से यह कार्य पूरा करवाएं। धन्यवाद।`;
+}
+
+export function sendDiaryToWhatsApp(
+  className: string,
+  rollNumbers: string[],
+  classwork: string,
+  homework: string,
+  subject?: string
+): void {
+  const text = buildDiaryMessage(className, classwork, homework, subject);
+  openWhatsAppMessages(
+    rollNumbers.map((roll) => ({
+      phone: getStudentInfo(className, roll).phone,
+      text,
+    }))
+  );
+}
