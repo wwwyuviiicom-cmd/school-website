@@ -7,6 +7,7 @@ import PTMCenter from '@/components/PTMCenter';
 import FeesReminderCenter from '@/components/FeesReminderCenter';
 import DailyDiaryCenter from '@/components/DailyDiaryCenter';
 import CertificateCenter from '@/components/CertificateCenter';
+import StudentAdminCenter from '@/components/StudentAdminCenter';
 import Footer from '@/components/Footer';
 
 function App() {
@@ -22,6 +23,7 @@ function App() {
         <FeesReminderCenter />
         <DailyDiaryCenter />
         <CertificateCenter />
+        <StudentAdminCenter />
       </main>
       <Footer />
     </div>
