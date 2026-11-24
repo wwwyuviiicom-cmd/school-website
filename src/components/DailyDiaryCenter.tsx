@@ -243,4 +243,10 @@ export default function DailyDiaryCenter() {
         <PasswordModal
           description="डायरी भेजने के लिए कृपया पासवर्ड दर्ज करें"
           onClose={() => setShowPasswordModal(false)}
-          
+                    onAuthenticated={handlePasswordSuccess}
+        />
+      )}
+    </section>
+  );
+}
+
