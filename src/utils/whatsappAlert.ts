@@ -4,8 +4,8 @@ export interface StudentInfo {
   gender: 'male' | 'female';
 }
 
-export const studentDatabase: Record<string, Record<string, StudentInfo>> = {
-  '9th B': {
+export const defaultStudentDatabase: Record<string, Record<string, StudentInfo>> = {
+  'Class 9 B': {
     '1': { name: 'ABHISHEK', phone: '9301324335', gender: 'male' },
     '2': { name: 'AKASH', phone: '871844709', gender: 'male' },
     '3': { name: 'ANJALI', phone: '8959428625', gender: 'female' },
@@ -39,7 +39,63 @@ export const studentDatabase: Record<string, Record<string, StudentInfo>> = {
   },
 };
 
-const DEFAULT_PHONE = '0000000000';
+const DB_STORAGE_KEY = 'gvm_student_db_v1';
+
+export function getStudentDatabase(): Record<string, Record<string, StudentInfo>> {
+  try {
+    const raw = localStorage.getItem(DB_STORAGE_KEY);
+    if (raw) {
+      return JSON.parse(raw);
+    }
+  } catch {
+    // ignore storage read error
+  }
+  localStorage.setItem(DB_STORAGE_KEY, JSON.stringify(defaultStudentDatabase));
+  return JSON.parse(JSON.stringify(defaultStudentDatabase));
+}
+
+export function saveStudentDatabase(db: Record<string, Record<string, StudentInfo>>): void {
+  localStorage.setItem(DB_STORAGE_KEY, JSON.stringify(db));
+  window.dispatchEvent(new Event('gvm-students-updated'));
+}
+
+export function addOrUpdateStudent(
+  className: string,
+  roll: string,
+  info: StudentInfo
+): void {
+  const db = getStudentDatabase();
+  if (!db[className]) {
+    db[className] = {};
+  }
+  db[className][roll.trim()] = info;
+  saveStudentDatabase(db);
+}
+
+export function removeStudent(className: string, roll: string): void {
+  const db = getStudentDatabase();
+  if (db[className]) {
+    delete db[className][roll];
+    saveStudentDatabase(db);
+  }
+}
+
+export function promoteClassStudents(fromClass: string, toClass: string): number {
+  const db = getStudentDatabase();
+  const sourceStudents = db[fromClass] || {};
+  const count = Object.keys(sourceStudents).length;
+  if (count === 0) return 0;
+
+  if (!db[toClass]) {
+    db[toClass] = {};
+  }
+  Object.entries(sourceStudents).forEach(([roll, info]) => {
+    db[toClass][roll] = { ...info };
+  });
+  db[fromClass] = {};
+  saveStudentDatabase(db);
+  return count;
+}
 
 export const alertReasons = [
   'मस्ती',
@@ -52,21 +108,50 @@ export const alertReasons = [
 ];
 
 export const classOptions = [
-  '8th A',
-  '8th B',
-  '9th A',
-  '9th B',
-  '10th A',
-  '10th B',
-  '11th Chemistry',
-  '11th Maths',
-  '11th Physics',
-  '11th Bio',
-  '12th Physics',
-  '12th Maths',
-  '12th Chemistry',
-  '12th Bio',
+  'Class 1 A',
+  'Class 1 B',
+  'Class 2 A',
+  'Class 2 B',
+  'Class 3 A',
+  'Class 3 B',
+  'Class 4 A',
+  'Class 4 B',
+  'Class 5 A',
+  'Class 5 B',
+  'Class 6 A',
+  'Class 6 B',
+  'Class 7 A',
+  'Class 7 B',
+  'Class 8 A',
+  'Class 8 B',
+  'Class 9 A',
+  'Class 9 B',
+  'Class 10 A',
+  'Class 10 B',
+  '11 Bio',
+  '11 Physics',
+  '11 Maths',
+  '11 Chemistry',
+  '11 Commerce',
+  '12 Bio',
+  '12 Physics',
+  '12 Maths',
+  '12 Chemistry',
+  '12 Commerce',
 ];
+
+export const juniorSubjects = [
+  'Hindi',
+  'English',
+  'Maths',
+  'Science',
+  'Sanskrit',
+  'Social Science',
+];
+
+export function isClass1To10(className: string): boolean {
+  return className.startsWith('Class ');
+}
 
 export const AUTH_PASSWORD = 'gvm2026';
 export const AUTH_STORAGE_KEY = 'gvm_auth';
@@ -83,37 +168,28 @@ export function authenticate(password: string): boolean {
   return false;
 }
 
-const REAL_DATA_CLASS = '9th B';
-const DUMMY_ROW_COUNT = 50;
-
-function dummyStudent(rollNumber: string): StudentInfo {
-  const isEven = Number(rollNumber) % 2 === 0;
-  return {
-    name: `टेस्ट छात्र ${rollNumber}`,
-    phone: DEFAULT_PHONE,
-    gender: isEven ? 'female' : 'male',
-  };
-}
-
 export function getStudentInfo(
   className: string,
   rollNumber: string
 ): StudentInfo {
-  return studentDatabase[className]?.[rollNumber] ?? dummyStudent(rollNumber);
+  const db = getStudentDatabase();
+  return (
+    db[className]?.[rollNumber] ?? {
+      name: `छात्र ${rollNumber}`,
+      phone: '0000000000',
+      gender: 'male',
+    }
+  );
 }
 
 export function getClassStudents(
   className: string
 ): Array<{ roll: string; info: StudentInfo }> {
-  if (className === REAL_DATA_CLASS) {
-    return Object.entries(studentDatabase[REAL_DATA_CLASS])
-      .sort((a, b) => Number(a[0]) - Number(b[0]))
-      .map(([roll, info]) => ({ roll, info }));
-  }
-  return Array.from({ length: DUMMY_ROW_COUNT }, (_, i) => {
-    const roll = String(i + 1);
-    return { roll, info: dummyStudent(roll) };
-  });
+  const db = getStudentDatabase();
+  const classRecords = db[className] || {};
+  return Object.entries(classRecords)
+    .sort((a, b) => Number(a) - Number(b))
+    .map(([roll, info]) => ({ roll, info }));
 }
 
 const ALERT_CLOSING = 'कृपया इस पर तुरंत ध्यान दीजिएगा।';
@@ -152,7 +228,7 @@ export function buildAlertMessage(
 
 function openWhatsAppMessages(messages: Array<{ phone: string; text: string }>): void {
   messages.forEach(({ phone, text }, index) => {
-    const url = `https://wa.me/91${phone}?text=${encodeURIComponent(text)}`;
+    const url = `https://wa.me{phone}?text=${encodeURIComponent(text)}`;
     setTimeout(() => {
       window.open(url, '_blank');
     }, index * 800);
@@ -203,7 +279,7 @@ export function sendSinglePtmToWhatsApp(
   const student = getStudentInfo(className, roll);
   const phone = `91${student.phone}`;
   const message = buildPtmMessage(className, roll, marks, status);
-  const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+  const url = `https://wa.me{phone}?text=${encodeURIComponent(message)}`;
   window.open(url, '_blank');
 }
 
@@ -233,48 +309,3 @@ export function buildFeeMessage(
   const student = getStudentInfo(className, rollNumber);
   return `गायत्री विद्या मंदिर (GVM) फीस अलर्ट
 नमस्कार सर/मैडम,
-आपके बच्चे ${student.name} (रोल नंबर: ${rollNumber}) की स्कूल फीस ₹${amount} बकाया है। जमा करने की अंतिम तिथि ${formatFeeDate(lastDate)} है। कृपया लेट फीस से बचने के लिए समय पर भुगतान करें।
-धन्यवाद।`;
-}
-
-export function sendFeeRemindersToWhatsApp(
-  className: string,
-  rollNumbers: string[],
-  amount: string,
-  lastDate: string
-): void {
-  openWhatsAppMessages(
-    rollNumbers.map((roll) => ({
-      phone: getStudentInfo(className, roll).phone,
-      text: buildFeeMessage(className, roll, amount, lastDate),
-    }))
-  );
-}
-
-export function buildDiaryMessage(
-  className: string,
-  classwork: string,
-  homework: string
-): string {
-  return `गायत्री विद्या मंदिर (GVM) दैनिक डायरी
-कक्षा: ${className}
-नमस्कार सर/मैडम, आज स्कूल में यह कार्य करवाया गया है:
-📘 आज पढ़ाया गया: ${classwork}
-📝 आज का गृहकार्य: ${homework}
-कृपया घर पर बच्चों से यह कार्य पूरा करवाएं। धन्यवाद।`;
-}
-
-export function sendDiaryToWhatsApp(
-  className: string,
-  rollNumbers: string[],
-  classwork: string,
-  homework: string
-): void {
-  const text = buildDiaryMessage(className, classwork, homework);
-  openWhatsAppMessages(
-    rollNumbers.map((roll) => ({
-      phone: getStudentInfo(className, roll).phone,
-      text,
-    }))
-  );
-}
