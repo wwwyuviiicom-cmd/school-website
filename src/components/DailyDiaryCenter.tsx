@@ -1,9 +1,11 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { AlertCircle, BookOpen, CheckCircle2, ClipboardList, Send } from 'lucide-react';
 import {
   classOptions,
   getClassStudents,
   isAuthenticated,
+  isClass1To10,
+  juniorSubjects,
   sendDiaryToWhatsApp,
 } from '@/utils/whatsappAlert';
 import { useScrollReveal } from '@/hooks/useScrollReveal';
@@ -13,7 +15,7 @@ import StudentSelector from '@/components/StudentSelector';
 const textareaClasses =
   'w-full bg-ink-950 border border-ink-600/40 text-white text-sm rounded-lg px-4 py-3 outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/30 transition-colors resize-y min-h-[100px] placeholder-slate-500';
 
-const INITIAL_CLASS = classOptions[0];
+const INITIAL_CLASS = 'Class 9 B';
 
 const allRollsOf = (className: string): string[] =>
   getClassStudents(className).map((s) => s.roll);
@@ -21,14 +23,27 @@ const allRollsOf = (className: string): string[] =>
 export default function DailyDiaryCenter() {
   const ref = useScrollReveal<HTMLDivElement>();
   const [selectedClass, setSelectedClass] = useState(INITIAL_CLASS);
+  const [selectedSubject, setSelectedSubject] = useState(juniorSubjects[0]);
   const [selectedRolls, setSelectedRolls] = useState<string[]>(() => allRollsOf(INITIAL_CLASS));
   const [classwork, setClasswork] = useState('');
   const [homework, setHomework] = useState('');
   const [error, setError] = useState('');
   const [sent, setSent] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [refreshTick, setRefreshTick] = useState(0);
 
-  const students = useMemo(() => getClassStudents(selectedClass), [selectedClass]);
+  useEffect(() => {
+    const onUpdate = () => setRefreshTick((t) => t + 1);
+    window.addEventListener('gvm-students-updated', onUpdate);
+    return () => window.removeEventListener('gvm-students-updated', onUpdate);
+  }, []);
+
+  const students = useMemo(
+    () => getClassStudents(selectedClass),
+    [selectedClass, refreshTick]
+  );
+
+  const showSubjectPicker = isClass1To10(selectedClass);
 
   const handleClassChange = (className: string) => {
     setSelectedClass(className);
@@ -37,7 +52,13 @@ export default function DailyDiaryCenter() {
   };
 
   const doSend = () => {
-    sendDiaryToWhatsApp(selectedClass, selectedRolls, classwork.trim(), homework.trim());
+    sendDiaryToWhatsApp(
+      selectedClass,
+      selectedRolls,
+      classwork.trim(),
+      homework.trim(),
+      showSubjectPicker ? selectedSubject : undefined
+    );
     setSent(true);
     setTimeout(() => {
       setSent(false);
@@ -115,21 +136,42 @@ export default function DailyDiaryCenter() {
             </div>
           ) : (
             <div className="space-y-6">
-              <div>
-                <label className="block text-sm text-white font-medium mb-2.5">
-                  कक्षा चुनें (Select Class)
-                </label>
-                <select
-                  value={selectedClass}
-                  onChange={(e) => handleClassChange(e.target.value)}
-                  className="px-4 py-2.5 rounded-lg bg-ink-900 border border-ink-600/50 text-sm text-white outline-none focus:border-amber-500/50 transition-colors cursor-pointer min-w-[120px]"
-                >
-                  {classOptions.map((cls) => (
-                    <option key={cls} value={cls}>
-                      {cls}
-                    </option>
-                  ))}
-                </select>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm text-white font-medium mb-2.5">
+                    कक्षा चुनें (Select Class)
+                  </label>
+                  <select
+                    value={selectedClass}
+                    onChange={(e) => handleClassChange(e.target.value)}
+                    className="w-full px-4 py-2.5 rounded-lg bg-ink-900 border border-ink-600/50 text-sm text-white outline-none focus:border-amber-500/50 transition-colors cursor-pointer"
+                  >
+                    {classOptions.map((cls) => (
+                      <option key={cls} value={cls}>
+                        {cls}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {showSubjectPicker && (
+                  <div>
+                    <label className="block text-sm text-white font-medium mb-2.5">
+                      विषय चुनें (Select Subject)
+                    </label>
+                    <select
+                      value={selectedSubject}
+                      onChange={(e) => setSelectedSubject(e.target.value)}
+                      className="w-full px-4 py-2.5 rounded-lg bg-ink-900 border border-ink-600/50 text-sm text-white outline-none focus:border-amber-500/50 transition-colors cursor-pointer"
+                    >
+                      {juniorSubjects.map((sub) => (
+                        <option key={sub} value={sub}>
+                          {sub}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
               </div>
 
               <div>
@@ -139,7 +181,7 @@ export default function DailyDiaryCenter() {
                 <textarea
                   value={classwork}
                   onChange={(e) => setClasswork(e.target.value)}
-                  placeholder="जैसे: रासायनिक बंध (Chemical Bonding) का परिचय"
+                  placeholder="जैसे: पाठ 3 का सार एवं प्रश्नोत्तर समझाया"
                   className={textareaClasses}
                 />
               </div>
@@ -151,7 +193,7 @@ export default function DailyDiaryCenter() {
                 <textarea
                   value={homework}
                   onChange={(e) => setHomework(e.target.value)}
-                  placeholder="जैसे: पाठ 5 के अभ्यास प्रश्न 1 से 10 लिखें"
+                  placeholder="जैसे: अभ्यास प्रश्न 1 से 10 कॉपी में लिखकर लाएं"
                   className={textareaClasses}
                 />
               </div>
@@ -160,7 +202,7 @@ export default function DailyDiaryCenter() {
                 <div className="flex flex-col items-center justify-center text-center py-10 rounded-xl bg-ink-900/40 border border-ink-600/30">
                   <ClipboardList className="w-10 h-10 text-slate-600 mb-3" />
                   <p className="text-sm text-slate-400">
-                    इस कक्षा का छात्र डेटा अभी उपलब्ध नहीं है।
+                    इस कक्षा का छात्र डेटा अभी उपलब्ध नहीं है। नीचे एडमिन पैनल से छात्र जोड़ें।
                   </p>
                 </div>
               ) : (
@@ -202,8 +244,4 @@ export default function DailyDiaryCenter() {
           description="डायरी भेजने के लिए कृपया पासवर्ड दर्ज करें"
           onClose={() => setShowPasswordModal(false)}
           onAuthenticated={handlePasswordSuccess}
-        />
-      )}
-    </section>
-  );
-}
+                  
