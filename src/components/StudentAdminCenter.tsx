@@ -250,5 +250,95 @@ export default function StudentAdminCenter() {
                 </button>
               </form>
             </div>
+            <div className="space-y-3 pt-4 border-t border-ink-700">
+              <div className="flex items-center justify-between">
+                <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                  <Users className="w-4 h-4 text-sky-400" />
+                  {selectedClass} के वर्तमान छात्र ({students.length})
+                </h4>
+              </div>
+
+              {students.length === 0 ? (
+                <p className="text-xs text-slate-400 py-4 text-center bg-ink-950/60 rounded-lg">
+                  इस कक्षा में अभी कोई छात्र नहीं है। ऊपर फॉर्म से जोड़ें।
+                </p>
+              ) : (
+                <div className="max-h-64 overflow-y-auto space-y-2 pr-1">
+                  {students.map(({ roll, info }) => (
+                    <div
+                      key={roll}
+                      className="flex items-center justify-between px-3.5 py-2.5 rounded-lg bg-ink-950 border border-ink-700/80 text-xs sm:text-sm"
+                    >
+                      <div>
+                        <span className="font-bold text-amber-400 mr-2">#{roll}</span>
+                        <span className="text-white font-medium">{info.name}</span>
+                        <span className="text-slate-400 ml-2">({info.phone})</span>
+                      </div>
+                      <button
+                        onClick={() => handleDelete(roll, info.name)}
+                        className="px-2.5 py-1.5 rounded bg-red-500/15 hover:bg-red-500/30 text-red-400 flex items-center gap-1 text-xs font-semibold transition-colors"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        हटाएं
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-4 pt-4 border-t border-ink-700">
+              <h3 className="text-base font-bold text-sky-400 flex items-center gap-2">
+                <ArrowRightCircle className="w-5 h-5" />
+                2. नए सत्र के लिए पूरी क्लास को अगली कक्षा में भेजें (Shift Class)
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs text-slate-400 mb-1">
+                    वर्तमान कक्षा (जहाँ से भेजना है)
+                  </label>
+                  <select
+                    value={fromClass}
+                    onChange={(e) => setFromClass(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-lg bg-ink-950 border border-ink-600/60 text-sm text-white outline-none"
+                  >
+                    {classOptions.map((cls) => (
+                      <option key={cls} value={cls}>
+                        {cls}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs text-slate-400 mb-1">
+                    अगली कक्षा (जहाँ शिफ्ट करना है)
+                  </label>
+                  <select
+                    value={toClass}
+                    onChange={(e) => setToClass(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-lg bg-ink-950 border border-ink-600/60 text-sm text-white outline-none"
+                  >
+                    {classOptions.map((cls) => (
+                      <option key={cls} value={cls}>
+                        {cls}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={handlePromote}
+                className="w-full py-3 rounded-lg bg-sky-600 hover:bg-sky-500 text-white font-bold text-sm transition-colors"
+              >
+                सभी छात्रों को अगली कक्षा में शिफ्ट करें →
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
 
             
